@@ -1,10 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export const isSupabaseConfigured = () => {
-  return (
+  return Boolean(
     supabaseUrl &&
     supabaseUrl.startsWith('https://') &&
     !supabaseUrl.includes('your-project-id') &&
@@ -17,8 +19,8 @@ export const supabase = isSupabaseConfigured()
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
-// LocalStorage fallback for seamless preview
-const LOCAL_WISHES_KEY = 'mohamed_samar_wishes_react';
+// LocalStorage fallback for seamless preview when Supabase is not configured
+const LOCAL_WISHES_KEY = 'beso_wedding_wishes_local';
 
 export const getLocalWishes = () => {
   try {

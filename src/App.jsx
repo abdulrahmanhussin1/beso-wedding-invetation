@@ -77,6 +77,7 @@ export default function App() {
   const [wisherMessage, setWisherMessage] = useState('');
   const [isSubmittingWish, setIsSubmittingWish] = useState(false);
   const [wishStatus, setWishStatus] = useState({ text: '', type: '' });
+  const [fetchError, setFetchError] = useState('');
 
   // Gift Registry state
   const [showGiftDetails, setShowGiftDetails] = useState(false);
@@ -232,26 +233,41 @@ export default function App() {
             .order('created_at', { ascending: false })
             .limit(50);
 
-          if (!error && data && data.length > 0) {
-            setWishes(data);
+          if (error) {
+            console.error('Supabase fetch failed:', {
+              message: error?.message,
+              code: error?.code,
+              details: error?.details,
+              hint: error?.hint,
+            });
+            setWishes([]);
+            setFetchError(t.guestbook.fetchError || (lang === 'ar' ? 'تعذر تحميل التهاني حالياً. حاول تحديث الصفحة.' : 'Could not load wishes at this time. Please refresh the page.'));
             return;
           }
+
+          setFetchError('');
+          setWishes(data ?? []);
+          return;
         } catch (err) {
-          console.warn('Supabase fetch error, fallback to local', err);
+          console.error('Supabase fetch failed:', err);
+          setWishes([]);
+          setFetchError(t.guestbook.fetchError || (lang === 'ar' ? 'تعذر تحميل التهاني حالياً. حاول تحديث الصفحة.' : 'Could not load wishes at this time. Please refresh the page.'));
+          return;
         }
       }
 
-      // Local fallback
+      // Local fallback ONLY when Supabase is not configured
+      setFetchError('');
       const local = getLocalWishes();
       if (local && local.length > 0) {
         setWishes(local);
       } else {
-        setWishes(t.guestbook.initialWishes);
+        setWishes(t.guestbook.initialWishes ?? []);
       }
     };
 
     fetchWishes();
-  }, [lang, t.guestbook.initialWishes]);
+  }, [lang, t.guestbook.initialWishes, t.guestbook.fetchError]);
 
   // Handle Guestbook Submission
   const handlePostWish = async (e) => {
@@ -262,7 +278,6 @@ export default function App() {
     }
 
     setIsSubmittingWish(true);
-
     setWishStatus({ text: '', type: '' });
 
     const newWish = {
@@ -278,25 +293,36 @@ export default function App() {
           .insert([newWish])
           .select();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase insert failed:', {
+            message: error?.message,
+            code: error?.code,
+            details: error?.details,
+            hint: error?.hint,
+          });
+          setWishStatus({
+            text: t.guestbook.sendError || (lang === 'ar' ? 'تعذر إرسال التهنئة. حاول مرة أخرى.' : 'Could not send your wish. Please try again.'),
+            type: 'error',
+          });
+          return;
+        }
 
-        const inserted = data && data.length > 0 ? data[0] : newWish;
+        const inserted = data?.[0] ?? newWish;
         setWishes((prev) => [inserted, ...prev]);
         setWishStatus({ text: t.guestbook.successMsg, type: 'success' });
         setWisherName('');
         setWisherMessage('');
       } catch (err) {
-        console.error('Supabase insert failed, saving locally:', err);
-        saveLocalWish(newWish);
-        setWishes((prev) => [newWish, ...prev]);
-        setWishStatus({ text: t.guestbook.fallbackMsg, type: 'success' });
-        setWisherName('');
-        setWisherMessage('');
+        console.error('Supabase insert failed:', err);
+        setWishStatus({
+          text: t.guestbook.sendError || (lang === 'ar' ? 'تعذر إرسال التهنئة. حاول مرة أخرى.' : 'Could not send your wish. Please try again.'),
+          type: 'error',
+        });
       } finally {
         setIsSubmittingWish(false);
       }
     } else {
-      // Local preview simulation
+      // Local preview simulation ONLY when Supabase is not configured
       setTimeout(() => {
         saveLocalWish(newWish);
         setWishes((prev) => [newWish, ...prev]);
@@ -840,7 +866,16 @@ export default function App() {
               </span>
             </div>
 
-            <div className="max-h-[460px] overflow-y-auto space-y-3 pr-1 sm:pr-2 luxury-scrollbar">
+            {fetchError ? (
+              <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs text-center my-2">
+                {fetchError}
+              </div>
+            ) : wishes.length === 0 ? (
+              <div className="p-6 text-center text-xs sm:text-sm text-muted">
+                {lang === 'ar' ? 'لا توجد تهاني مسجلة حتى الآن. كن أول من يبارك للعروسين!' : 'No wishes recorded yet. Be the first to congratulate the couple!'}
+              </div>
+            ) : (
+              <div className="max-h-[460px] overflow-y-auto space-y-3 pr-1 sm:pr-2 luxury-scrollbar">
               {wishes.map((item, idx) => (
                 <div
                   key={item.id || idx}
@@ -862,7 +897,8 @@ export default function App() {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            )}
 
             {wishes.length > 5 && (
               <div className="pt-2.5 mt-2 border-t border-gold/20 text-center">
