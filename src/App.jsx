@@ -149,6 +149,7 @@ export default function App() {
       };
 
       setIsPlayingMusic(true);
+      
       playChime(notes[0]);
 
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -261,7 +262,7 @@ export default function App() {
     }
 
     setIsSubmittingWish(true);
-    
+
     setWishStatus({ text: '', type: '' });
 
     const newWish = {
