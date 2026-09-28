@@ -226,7 +226,7 @@ export default function App() {
       if (isSupabaseConfigured() && supabase) {
         try {
           const { data, error } = await supabase
-            .from('wedding_wishes')
+            .from('beso_wedding_wishes')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(50);
@@ -272,7 +272,7 @@ export default function App() {
     if (isSupabaseConfigured() && supabase) {
       try {
         const { data, error } = await supabase
-          .from('wedding_wishes')
+          .from('beso_wedding_wishes')
           .insert([newWish])
           .select();
 
