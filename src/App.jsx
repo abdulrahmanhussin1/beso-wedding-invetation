@@ -261,6 +261,7 @@ export default function App() {
     }
 
     setIsSubmittingWish(true);
+    
     setWishStatus({ text: '', type: '' });
 
     const newWish = {
